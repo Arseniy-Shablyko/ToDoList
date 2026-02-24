@@ -6,17 +6,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
     <link rel="stylesheet" href="style.css">
+    <script src="script.js" defer></script>
 </head>
-<body>
+<body class="body">
     <div class="conteiner">
         <div class="control-buttons-container">
-            <button class="add">+</button>
-            <button class="active-page">active</button>
-            <button class="done-page">done</button>
-            <button class="deleted-page">deleted</button>
+            <button class="add" id="add">+</button>
+            <button class="active-page" id="active-page">active</button>
+            <button class="done-page" id="done-page">done</button>
+            <button class="deleted-page" id="deleted-page">deleted</button>
         </div>
         <div class="tasks-container">
-            
+            <div class="input-container" id="input-space">
+                <p class="input-text" id="input-text"></p>
+            </div>
         </div>
     </div>
 </body>
