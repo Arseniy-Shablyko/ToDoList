@@ -1,7 +1,11 @@
 let add_b = document.getElementById("add");
-let input_sp = document.getElementById("input-text");
+let idCounter = 1;
 
 add_b.addEventListener('click', function(){
-    input_sp.innerText += prompt("Input text...");
-    input_sp.innerText += "\n"
+    let list = document.getElementById("list");
+    let newItem = document.createElement("li");
+    newItem.id = idCounter;
+    idCounter++;
+    newItem.textContent = prompt("Input text...");
+    list.appendChild(newItem);
 });
