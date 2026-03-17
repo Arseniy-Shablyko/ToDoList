@@ -12,6 +12,22 @@ let deletArray = [];
 let deletArrayIndex = 0;
 let isActive = true;
 
+document.addEventListener("DOMContentLoaded", function(){
+    let jsonarray = localStorage.getItem('item');
+    activeArray = JSON.parse(jsonarray) || [];
+    activeArray = JSON.parse(activeArray);
+});
+
+window.addEventListener('load', function(){
+    console.log(activeArray.length);
+    activeArrayIndex += activeArray.length;
+    activeArray.forEach((item, index) => {
+        let newItem = document.createElement("li");
+        newItem.textContent = activeArray[index];
+        list.appendChild(newItem);
+    });
+});
+
 add_b.addEventListener('click', function(){
     if(isActive === true){
         let newItem = document.createElement("li");
@@ -21,6 +37,8 @@ add_b.addEventListener('click', function(){
         list.appendChild(newItem);
         activeArray[activeArrayIndex] = newItem.textContent;
         activeArrayIndex++;
+        localStorage.setItem('item', JSON.stringify(activeArray));
+        console.log(localStorage.getItem('item'));
     }
 });
 
