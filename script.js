@@ -13,19 +13,31 @@ let deletArrayIndex = 0;
 let isActive = true;
 
 document.addEventListener("DOMContentLoaded", function(){
-    let jsonarray = localStorage.getItem('item');
-    activeArray = JSON.parse(jsonarray) || [];
+    let jsonarray_active = localStorage.getItem('active');
+    activeArray = JSON.parse(jsonarray_active) || [];
     activeArray = JSON.parse(activeArray);
+
+    let jsonarray_done = localStorage.getItem('done');
+    doneArray = JSON.parse(jsonarray_done) || [];
+    doneArray = JSON.parse(doneArray);
+
+    let jsonarray_deleted = localStorage.getItem('deleted');
+    deletArray = JSON.parse(jsonarray_deleted) || [];
+    deletArray = JSON.parse(deletArray);
 });
 
-window.addEventListener('load', function(){
-    console.log(activeArray.length);
+window.addEventListener('load', function(){ 
+    console.log(localStorage.getItem('deleted'));
+    console.log(deletArray);
     activeArrayIndex += activeArray.length;
     activeArray.forEach((item, index) => {
         let newItem = document.createElement("li");
         newItem.textContent = activeArray[index];
         list.appendChild(newItem);
     });
+
+    deletArrayIndex += deletArray.length;
+    doneArrayIndex += doneArray.length;
 });
 
 add_b.addEventListener('click', function(){
@@ -37,8 +49,8 @@ add_b.addEventListener('click', function(){
         list.appendChild(newItem);
         activeArray[activeArrayIndex] = newItem.textContent;
         activeArrayIndex++;
-        localStorage.setItem('item', JSON.stringify(activeArray));
-        console.log(localStorage.getItem('item'));
+        localStorage.setItem('active', JSON.stringify(activeArray));
+        console.log(localStorage.getItem('active'));
     }
 });
 
@@ -51,6 +63,7 @@ list.addEventListener('click', function(event){
             activeArray = activeArray.filter(item => item !== text);
             activeArrayIndex--;
             event.target.remove();
+            localStorage.setItem('done', JSON.stringify(doneArray));
         } 
     }
 });
@@ -64,11 +77,13 @@ list.addEventListener('contextmenu', function(event){
             activeArray = activeArray.filter(item => item !== text);
             activeArrayIndex--;
             event.target.remove();
+            localStorage.setItem('deleted', JSON.stringify(deletArray));
         } 
     }
 });
 
 done_b.addEventListener('click', function(){
+    console.log(doneArray);
     list.innerText = '';
     doneArray.forEach((element) => {
         let newItem = document.createElement("li");
@@ -89,6 +104,7 @@ active_b.addEventListener('click', function(){
 });
 
 delet_b.addEventListener('click', function(){
+    console.log(deletArray);
     list.innerText = '';
     deletArray.forEach((element) => {
         let newItem = document.createElement("li");
