@@ -13,6 +13,8 @@ let deletArrayIndex = 0;
 let isActive = true;
 
 document.addEventListener("DOMContentLoaded", function(){
+    active_b.focus();
+
     let jsonarray_done = localStorage.getItem('done');
     doneArray = JSON.parse(jsonarray_done) || [];
 
