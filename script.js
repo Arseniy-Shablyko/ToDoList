@@ -11,10 +11,23 @@ let doneArray = [];
 let deletArray = [];
 let deletArrayIndex = 0;
 let isActive = true;
+let isDone = false;
+let isDeleted = false;
+
+
+function focus_button(){
+    if(isActive){
+        active_b.focus();
+    }
+    else if(isDone){
+        done_b.focus();
+    }
+    else{
+        delet_b.focus();
+    }
+}
 
 document.addEventListener("DOMContentLoaded", function(){
-    active_b.focus();
-
     let jsonarray_done = localStorage.getItem('done');
     doneArray = JSON.parse(jsonarray_done) || [];
 
@@ -27,8 +40,7 @@ document.addEventListener("DOMContentLoaded", function(){
 });
 
 window.addEventListener('load', function(){
-    console.log(doneArray.length);
-    console.log(deletArray.length);
+    focus_button();
 
     doneArrayIndex += doneArray.length;
     deletArrayIndex += deletArray.length;
@@ -45,7 +57,8 @@ window.addEventListener('load', function(){
 });
 
 add_b.addEventListener('click', function(){
-    if(isActive === true){
+    focus_button();
+    if(isActive){
         let newItem = document.createElement("li");
         newItem.id = idCounter;
         idCounter++;
@@ -58,7 +71,7 @@ add_b.addEventListener('click', function(){
 });
 
 list.addEventListener('click', function(event){
-    if(isActive === true){
+    if(isActive){
         if(event.target.tagName === 'LI'){
             let text = event.target.innerText;
             doneArray[doneArrayIndex] = text;
@@ -70,10 +83,34 @@ list.addEventListener('click', function(event){
             localStorage.setItem('active', JSON.stringify(activeArray));
         } 
     }
+    else if(isDone){
+        if(event.target.tagName === 'LI'){
+            let text = event.target.innerText;
+            activeArray[activeArrayIndex] = text;
+            activeArrayIndex++;
+            doneArray = doneArray.filter(item => item !== text);
+            doneArrayIndex--;
+            event.target.remove();
+            localStorage.setItem('done', JSON.stringify(doneArray));
+            localStorage.setItem('active', JSON.stringify(activeArray));
+        }
+    }
+    else if(isDeleted){
+        if(event.target.tagName === 'LI'){
+            let text = event.target.innerText;
+            activeArray[activeArrayIndex] = text;
+            activeArrayIndex++;
+            deletArray = deletArray.filter(item => item !== text);
+            deletArrayIndex--;
+            event.target.remove();
+            localStorage.setItem('done', JSON.stringify(doneArray));
+            localStorage.setItem('active', JSON.stringify(activeArray));
+        }
+    }
 });
 
 list.addEventListener('contextmenu', function(event){
-    if(isActive === true){
+    if(isActive){
         if(event.target.tagName === 'LI'){
             let text = event.target.innerText;
             deletArray[deletArrayIndex] = text;
@@ -95,6 +132,8 @@ done_b.addEventListener('click', function(){
         list.appendChild(newItem);
     });
     isActive = false;
+    isDone = true;
+    isDeleted = false;
 });
 
 active_b.addEventListener('click', function(){
@@ -105,6 +144,8 @@ active_b.addEventListener('click', function(){
         list.appendChild(newItem);
     });
     isActive = true;
+    isDone = false;
+    isDeleted = false;
 });
 
 delet_b.addEventListener('click', function(){
@@ -115,4 +156,6 @@ delet_b.addEventListener('click', function(){
         list.appendChild(newItem);
     });
     isActive = false;
+    isDone = false;
+    isDeleted = true;
 });
