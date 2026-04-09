@@ -1,88 +1,172 @@
-*{
-    padding: 0;
+/* ==========================================================================
+   CSS Custom Properties (Design Tokens)
+   ========================================================================== */
+:root {
+    /* Colors */
+    --color-bg-body: #C0C0C0;
+    --color-bg-button: rgb(82, 141, 100);
+    --color-bg-button-hover: rgb(106, 153, 120);
+    --color-bg-button-active: white;
+    --color-bg-input: white;
+    --color-text-default: rgb(241, 217, 217);
+    --color-text-active: black;
+    --color-border: black;
+    
+    /* Spacing */
+    --spacing-container-width: 1100px;
+    --spacing-container-height: 1500px;
+    --spacing-header-height: 50px;
+    --spacing-tasks-height: 1100px;
+    --spacing-margin-bottom: 25px;
+    --spacing-button-width: 275px;
+    --spacing-list-margin-left: 30px;
+    --spacing-input-margin-top: 37px;
+    
+    /* Border radius */
+    --radius-input-container: 50px;
+    
+    /* Border width */
+    --border-width-thin: 0.5px;
+    --border-width-thick: 2px;
+    
+    /* Font */
+    --font-family-serif: serif;
+}
+
+/* ==========================================================================
+   Base Styles & Reset
+   ========================================================================== */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
     margin: 0;
+    padding: 0;
 }
 
-.body{
-    background-color: #C0C0C0;
-    width: 1100px;
-    height: 1500px;
+/* ==========================================================================
+   Layout
+   ========================================================================== */
+.body {
+    background-color: var(--color-bg-body);
+    width: var(--spacing-container-width);
+    height: var(--spacing-container-height);
 }
 
-.conteiner{
-    width: 1100px;
-    height: 1500px;
+.container {
+    width: var(--spacing-container-width);
+    height: var(--spacing-container-height);
     display: flex;
     flex-direction: column;
 }
 
-.control-buttons-container{
-    width: 1100px;
-    height: 50px;
-    display: flex;
-    flex-direction: row;
-    border-bottom: 2px solid black;
-    margin-bottom: 25px;
+/* ==========================================================================
+   Header & Navigation
+   ========================================================================== */
+.header {
+    width: 100%;
 }
 
-.tasks-container{
-    width: 1100px;
-    height: 1100px;
+.control-buttons-container {
+    width: var(--spacing-container-width);
+    height: var(--spacing-header-height);
+    display: flex;
+    flex-direction: row;
+    border-bottom: var(--border-width-thick) solid var(--color-border);
+    margin-bottom: var(--spacing-margin-bottom);
+}
+
+/* ==========================================================================
+   Main Content Area
+   ========================================================================== */
+.tasks-container {
+    width: var(--spacing-container-width);
+    height: var(--spacing-tasks-height);
     display: flex;
     justify-content: center;
     align-items: center;
 }
 
-.input-container{
+.input-container {
     width: 90%;
     height: 97%;
-    border: 2px solid black;
-    background-color: white;
-    border-radius: 50px;
+    border: var(--border-width-thick) solid var(--color-border);
+    background-color: var(--color-bg-input);
+    border-radius: var(--radius-input-container);
     display: flex;
     align-items: center;
 }
 
-
-.add, .active-page,
-.done-page, .deleted-page{
-    width: 275px;
-    height: 50px;
-    background-color: rgb(82, 141, 100);
-    color: rgb(241, 217, 217);
-    border: 0.5px solid black;
-}
-
-.add:hover, .active-page:hover, .done-page:hover, .deleted-page:hover{
-    background-color: rgb(106, 153, 120);
-}
-
-
-.add:active, .active-page:active, .done-page:active, .deleted-page:active{
-    background-color: white;
-    color: black;
-}
-
-.active-page:focus, .done-page:focus, .deleted-page:focus{
-    background-color: white;
-    color: black;
-}
-
-.list{
-    margin-left: 30px;
-    list-style-type: circle;
-    
-}
-
-li{
-    font-style: Serif;
-}
-
-.input-space{
+.input-space {
     width: 95%;
     height: 95%;
 }
 
-.input-text{
-    margin-top: 37px;
+/* ==========================================================================
+   Buttons (BEM: .button)
+   ========================================================================== */
+.button {
+    width: var(--spacing-button-width);
+    height: var(--spacing-header-height);
+    background-color: var(--color-bg-button);
+    color: var(--color-text-default);
+    border: var(--border-width-thin) solid var(--color-border);
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+/* Button hover state */
+.button:hover {
+    background-color: var(--color-bg-button-hover);
+}
+
+/* Button active/pressed state */
+.button:active,
+.button:focus {
+    background-color: var(--color-bg-button-active);
+    color: var(--color-text-active);
+}
+
+/* Button focus visible for accessibility */
+.button:focus-visible {
+    outline: 2px solid var(--color-border);
+    outline-offset: 2px;
+}
+
+/* ==========================================================================
+   Task List
+   ========================================================================== */
+.list {
+    margin-left: var(--spacing-list-margin-left);
+    list-style-type: circle;
+}
+
+.list li,
+.list__item {
+    font-family: var(--font-family-serif);
+}
+
+/* ==========================================================================
+   Utility Classes
+   ========================================================================== */
+.input-text {
+    margin-top: var(--spacing-input-margin-top);
+}
+
+/* ==========================================================================
+   Accessibility: Reduced Motion
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+    .button {
+        transition: none;
+    }
+}
+
+/* ==========================================================================
+   Accessibility: High Contrast Mode Support
+   ========================================================================== */
+@media (prefers-contrast: high) {
+    .button {
+        border-width: var(--border-width-thick);
+    }
 }
