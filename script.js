@@ -1,10 +1,10 @@
 /**
- * Task Manager Application
+ * Kanban Board Task Manager Application
  * 
- * A simple task management app with three states: active, done, and deleted.
- * Uses localStorage for persistence and event delegation for performance.
+ * A modern task management app with drag-and-drop, modal dialogs,
+ * toast notifications, and localStorage persistence.
  * 
- * @module TaskManager
+ * @module KanbanBoard
  */
 
 (function() {
@@ -14,22 +14,16 @@
     // State Management
     // ==========================================================================
     
-    /** @type {Object.<string, string[]>} */
+    /** @type {Object.<string, Array<{id: number, text: string, createdAt: number}>} */
     const state = {
-        active: [],
+        todo: [],
+        inProgress: [],
         done: [],
         deleted: []
     };
 
-    /** @type {Object.<string, boolean>} Current view state */
-    const viewState = {
-        isActive: true,
-        isDone: false,
-        isDeleted: false
-    };
-
     /** @type {number} Unique ID counter for tasks */
-    let taskIdCounter = 1;
+    let taskIdCounter = Date.now();
 
     // ==========================================================================
     // DOM Elements Cache
@@ -41,55 +35,65 @@
      * Initialize DOM element references
      */
     function cacheElements() {
-        elements.addBtn = document.getElementById('add');
-        elements.activeBtn = document.getElementById('active-page');
-        elements.doneBtn = document.getElementById('done-page');
-        elements.deletedBtn = document.getElementById('deleted-page');
-        elements.list = document.getElementById('list');
+        elements.addBtn = document.getElementById('addBtn');
+        elements.modalOverlay = document.getElementById('modalOverlay');
+        elements.modalClose = document.getElementById('modalClose');
+        elements.modalCancel = document.getElementById('modalCancel');
+        elements.taskForm = document.getElementById('taskForm');
+        elements.taskId = document.getElementById('taskId');
+        elements.taskText = document.getElementById('taskText');
+        elements.modalTitle = document.getElementById('modalTitle');
+        elements.modalSubmitText = document.getElementById('modalSubmitText');
+        elements.toastContainer = document.getElementById('toastContainer');
+        
+        // Column elements
+        elements.columns = {
+            todo: document.getElementById('todo'),
+            inProgress: document.getElementById('inProgress'),
+            done: document.getElementById('done'),
+            deleted: document.getElementById('deleted')
+        };
+        
+        // Column count elements
+        elements.counts = {
+            todo: document.querySelector('.column--todo .column__count'),
+            inProgress: document.querySelector('.column--in-progress .column__count'),
+            done: document.querySelector('.column--done .column__count'),
+            deleted: document.querySelector('.column--deleted .column__count')
+        };
     }
 
     // ==========================================================================
     // LocalStorage Helpers
     // ==========================================================================
     
-    const STORAGE_KEYS = {
-        ACTIVE: 'active',
-        DONE: 'done',
-        DELETED: 'deleted'
-    };
+    const STORAGE_KEY = 'kanban_tasks';
 
     /**
      * Safely parse JSON from localStorage
-     * @param {string} key - Storage key
-     * @returns {any} Parsed data or null
+     * @returns {Object} Parsed data or empty object
      */
-    function getFromStorage(key) {
+    function getFromStorage() {
         try {
-            const item = localStorage.getItem(key);
+            const item = localStorage.getItem(STORAGE_KEY);
             if (!item) return null;
-            
-            const parsed = JSON.parse(item);
-            // Handle double-serialized data (legacy bug fix)
-            if (typeof parsed === 'string') {
-                return JSON.parse(parsed);
-            }
-            return parsed;
+            return JSON.parse(item);
         } catch (error) {
-            console.error(`Error reading from localStorage (${key}):`, error);
+            console.error('Error reading from localStorage:', error);
             return null;
         }
     }
 
     /**
      * Safely stringify and save to localStorage
-     * @param {string} key - Storage key
-     * @param {any} data - Data to store
+     * @param {Object} data - Data to store
      */
-    function saveToStorage(key, data) {
+    function saveToStorage(data) {
         try {
-            localStorage.setItem(key, JSON.stringify(data));
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
         } catch (error) {
-            console.error(`Error saving to localStorage (${key}):`, error);
+            console.error('Error saving to localStorage:', error);
+            showToast('Ошибка сохранения данных', 'error');
         }
     }
 
@@ -97,22 +101,82 @@
      * Load all task arrays from localStorage
      */
     function loadTasks() {
-        state.active = getFromStorage(STORAGE_KEYS.ACTIVE) || [];
-        state.done = getFromStorage(STORAGE_KEYS.DONE) || [];
-        state.deleted = getFromStorage(STORAGE_KEYS.DELETED) || [];
+        const savedData = getFromStorage();
         
-        // Update ID counter based on loaded tasks
-        const totalTasks = state.active.length + state.done.length + state.deleted.length;
-        taskIdCounter = totalTasks + 1;
+        if (savedData) {
+            state.todo = savedData.todo || [];
+            state.inProgress = savedData.inProgress || [];
+            state.done = savedData.done || [];
+            state.deleted = savedData.deleted || [];
+            
+            // Update ID counter to avoid duplicates
+            const allTasks = [...state.todo, ...state.inProgress, ...state.done, ...state.deleted];
+            if (allTasks.length > 0) {
+                taskIdCounter = Math.max(...allTasks.map(t => t.id)) + 1;
+            }
+        }
     }
 
     /**
      * Save current state to localStorage
      */
     function persistState() {
-        saveToStorage(STORAGE_KEYS.ACTIVE, state.active);
-        saveToStorage(STORAGE_KEYS.DONE, state.done);
-        saveToStorage(STORAGE_KEYS.DELETED, state.deleted);
+        saveToStorage({
+            todo: state.todo,
+            inProgress: state.inProgress,
+            done: state.done,
+            deleted: state.deleted
+        });
+    }
+
+    // ==========================================================================
+    // Toast Notifications
+    // ==========================================================================
+    
+    /**
+     * Show a toast notification
+     * @param {string} message - Message to display
+     * @param {string} type - Type: 'success', 'error', 'warning', 'info'
+     */
+    function showToast(message, type = 'info') {
+        const toast = document.createElement('div');
+        toast.className = `toast toast--${type}`;
+        toast.textContent = message;
+        
+        elements.toastContainer.appendChild(toast);
+        
+        // Auto-remove after 3 seconds
+        setTimeout(() => {
+            toast.style.animation = 'slideIn 0.25s ease-out reverse';
+            setTimeout(() => toast.remove(), 250);
+        }, 3000);
+    }
+
+    // ==========================================================================
+    // Modal Functions
+    // ==========================================================================
+    
+    /**
+     * Open the modal for adding/editing a task
+     * @param {number|null} taskId - Task ID for editing, null for adding
+     * @param {string|null} taskText - Current task text for editing
+     */
+    function openModal(taskId = null, taskText = null) {
+        elements.taskId.value = taskId || '';
+        elements.taskText.value = taskText || '';
+        elements.modalTitle.textContent = taskId ? 'Редактировать задачу' : 'Добавить задачу';
+        elements.modalSubmitText.textContent = taskId ? 'Обновить' : 'Сохранить';
+        elements.modalOverlay.hidden = false;
+        elements.taskText.focus();
+    }
+
+    /**
+     * Close the modal
+     */
+    function closeModal() {
+        elements.modalOverlay.hidden = true;
+        elements.taskForm.reset();
+        elements.taskId.value = '';
     }
 
     // ==========================================================================
@@ -120,176 +184,325 @@
     // ==========================================================================
     
     /**
-     * Clear the task list
+     * Create a task card element
+     * @param {Object} task - Task object
+     * @param {string} status - Current status/column
+     * @returns {HTMLElement} Task card element
      */
-    function clearList() {
-        elements.list.textContent = '';
+    function createTaskCard(task, status) {
+        const card = document.createElement('div');
+        card.className = 'task-card';
+        card.draggable = status !== 'deleted';
+        card.dataset.id = task.id;
+        card.dataset.status = status;
+        
+        const text = document.createElement('p');
+        text.className = 'task-card__text';
+        text.textContent = task.text;
+        
+        const actions = document.createElement('div');
+        actions.className = 'task-card__actions';
+        
+        if (status !== 'deleted') {
+            const editBtn = document.createElement('button');
+            editBtn.className = 'button button--secondary';
+            editBtn.innerHTML = '<span class="button__icon">✏️</span>';
+            editBtn.setAttribute('aria-label', 'Редактировать задачу');
+            editBtn.type = 'button';
+            editBtn.onclick = (e) => {
+                e.stopPropagation();
+                openModal(task.id, task.text);
+            };
+            
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'button button--danger';
+            deleteBtn.innerHTML = '<span class="button__icon">🗑️</span>';
+            deleteBtn.setAttribute('aria-label', 'Удалить задачу');
+            deleteBtn.type = 'button';
+            deleteBtn.onclick = (e) => {
+                e.stopPropagation();
+                moveTask(task.id, status, 'deleted');
+                showToast('Задача перемещена в удалённые', 'warning');
+            };
+            
+            actions.appendChild(editBtn);
+            actions.appendChild(deleteBtn);
+        } else {
+            const restoreBtn = document.createElement('button');
+            restoreBtn.className = 'button button--success';
+            restoreBtn.innerHTML = '<span class="button__icon">↩️</span>';
+            restoreBtn.setAttribute('aria-label', 'Восстановить задачу');
+            restoreBtn.type = 'button';
+            restoreBtn.onclick = (e) => {
+                e.stopPropagation();
+                moveTask(task.id, 'deleted', 'todo');
+                showToast('Задача восстановлена', 'success');
+            };
+            
+            const permanentDeleteBtn = document.createElement('button');
+            permanentDeleteBtn.className = 'button button--danger';
+            permanentDeleteBtn.innerHTML = '<span class="button__icon">❌</span>';
+            permanentDeleteBtn.setAttribute('aria-label', 'Удалить навсегда');
+            permanentDeleteBtn.type = 'button';
+            permanentDeleteBtn.onclick = (e) => {
+                e.stopPropagation();
+                deleteTaskPermanently(task.id);
+                showToast('Задача удалена навсегда', 'error');
+            };
+            
+            actions.appendChild(restoreBtn);
+            actions.appendChild(permanentDeleteBtn);
+        }
+        
+        card.appendChild(text);
+        card.appendChild(actions);
+        
+        // Drag events
+        if (status !== 'deleted') {
+            card.addEventListener('dragstart', handleDragStart);
+            card.addEventListener('dragend', handleDragEnd);
+        }
+        
+        return card;
     }
 
     /**
-     * Render tasks from a specific array
-     * @param {string[]} tasks - Array of task strings
+     * Render all columns
      */
-    function renderTasks(tasks) {
-        clearList();
-        
-        if (!tasks || tasks.length === 0) return;
+    function renderAllColumns() {
+        renderColumn('todo', state.todo);
+        renderColumn('inProgress', state.inProgress);
+        renderColumn('done', state.done);
+        renderColumn('deleted', state.deleted);
+    }
 
-        // Use DocumentFragment for batch DOM updates (performance)
+    /**
+     * Render a single column
+     * @param {string} status - Column status
+     * @param {Array} tasks - Tasks array
+     */
+    function renderColumn(status, tasks) {
+        const column = elements.columns[status];
+        const countEl = elements.counts[status];
+        
+        if (!column) return;
+        
+        column.innerHTML = '';
+        
+        if (countEl) {
+            countEl.textContent = tasks.length;
+        }
+        
+        if (!tasks || tasks.length === 0) {
+            const emptyMsg = document.createElement('p');
+            emptyMsg.style.color = 'var(--color-text-muted)';
+            emptyMsg.style.fontSize = 'var(--font-size-sm)';
+            emptyMsg.style.textAlign = 'center';
+            emptyMsg.style.padding = 'var(--spacing-md)';
+            emptyMsg.textContent = 'Нет задач';
+            column.appendChild(emptyMsg);
+            return;
+        }
+
+        // Use DocumentFragment for batch DOM updates
         const fragment = document.createDocumentFragment();
         
-        tasks.forEach(taskText => {
-            const listItem = document.createElement('li');
-            listItem.textContent = taskText; // XSS protection: textContent instead of innerHTML
-            listItem.className = 'list__item';
-            fragment.appendChild(listItem);
+        tasks.forEach(task => {
+            const card = createTaskCard(task, status);
+            fragment.appendChild(card);
         });
         
-        elements.list.appendChild(fragment);
+        column.appendChild(fragment);
+    }
+
+    // ==========================================================================
+    // Task Operations
+    // ==========================================================================
+    
+    /**
+     * Find task by ID and return its status and index
+     * @param {number} taskId - Task ID
+     * @returns {Object|null} Object with status, index, and task, or null
+     */
+    function findTask(taskId) {
+        for (const [status, tasks] of Object.entries(state)) {
+            const index = tasks.findIndex(t => t.id === taskId);
+            if (index !== -1) {
+                return { status, index, task: tasks[index] };
+            }
+        }
+        return null;
     }
 
     /**
-     * Update button focus based on current view
+     * Move task between columns
+     * @param {number} taskId - Task ID
+     * @param {string} fromStatus - Source status
+     * @param {string} toStatus - Target status
      */
-    function updateButtonFocus() {
-        if (viewState.isActive) {
-            elements.activeBtn.focus();
-        } else if (viewState.isDone) {
-            elements.doneBtn.focus();
-        } else {
-            elements.deletedBtn.focus();
+    function moveTask(taskId, fromStatus, toStatus) {
+        const found = findTask(taskId);
+        if (!found || found.status !== fromStatus) return;
+        
+        const [task] = state[fromStatus].splice(found.index, 1);
+        state[toStatus].push(task);
+        
+        persistState();
+        renderAllColumns();
+    }
+
+    /**
+     * Delete task permanently
+     * @param {number} taskId - Task ID
+     */
+    function deleteTaskPermanently(taskId) {
+        const found = findTask(taskId);
+        if (!found || found.status !== 'deleted') return;
+        
+        state.deleted.splice(found.index, 1);
+        persistState();
+        renderAllColumns();
+    }
+
+    /**
+     * Add a new task
+     * @param {string} text - Task text
+     */
+    function addTask(text) {
+        const task = {
+            id: taskIdCounter++,
+            text: text.trim(),
+            createdAt: Date.now()
+        };
+        
+        state.todo.push(task);
+        persistState();
+        renderAllColumns();
+        showToast('Задача создана', 'success');
+    }
+
+    /**
+     * Update existing task
+     * @param {number} taskId - Task ID
+     * @param {string} newText - New task text
+     */
+    function updateTask(taskId, newText) {
+        const found = findTask(taskId);
+        if (!found) return;
+        
+        state[found.status][found.index].text = newText.trim();
+        persistState();
+        renderAllColumns();
+        showToast('Задача обновлена', 'success');
+    }
+
+    // ==========================================================================
+    // Drag and Drop
+    // ==========================================================================
+    
+    let draggedElement = null;
+
+    function handleDragStart(event) {
+        draggedElement = event.target;
+        event.target.classList.add('dragging');
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('text/plain', event.target.dataset.id);
+    }
+
+    function handleDragEnd(event) {
+        event.target.classList.remove('dragging');
+        draggedElement = null;
+        
+        // Remove all drag-over classes
+        document.querySelectorAll('.column__content').forEach(col => {
+            col.classList.remove('drag-over');
+        });
+    }
+
+    function handleDragOver(event) {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'move';
+        
+        const column = event.target.closest('.column__content');
+        if (column) {
+            column.classList.add('drag-over');
         }
     }
 
-    /**
-     * Update aria-pressed attributes for accessibility
-     */
-    function updateButtonStates() {
-        elements.activeBtn.setAttribute('aria-pressed', viewState.isActive);
-        elements.doneBtn.setAttribute('aria-pressed', viewState.isDone);
-        elements.deletedBtn.setAttribute('aria-pressed', viewState.isDeleted);
+    function handleDragLeave(event) {
+        const column = event.target.closest('.column__content');
+        if (column && !column.contains(event.relatedTarget)) {
+            column.classList.remove('drag-over');
+        }
+    }
+
+    function handleDrop(event) {
+        event.preventDefault();
+        
+        const column = event.target.closest('.column__content');
+        if (!column || !draggedElement) return;
+        
+        column.classList.remove('drag-over');
+        
+        const taskId = parseInt(draggedElement.dataset.id);
+        const fromStatus = draggedElement.dataset.status;
+        const toStatus = column.id;
+        
+        if (fromStatus !== toStatus) {
+            moveTask(taskId, fromStatus, toStatus);
+            
+            const statusNames = {
+                todo: 'Новые',
+                inProgress: 'В работе',
+                done: 'Готовые',
+                deleted: 'Удалённые'
+            };
+            
+            showToast(`Задача перемещена: ${statusNames[toStatus]}`, 'success');
+        }
     }
 
     // ==========================================================================
     // Event Handlers
     // ==========================================================================
     
-    /**
-     * Handle adding a new task
-     */
     function handleAddTask() {
-        const taskText = prompt('Input text...');
-        
-        // Guard clause: empty input or user cancelled
-        if (!taskText || taskText.trim() === '') return;
-        
-        state.active.push(taskText.trim());
-        persistState();
-        
-        // Only re-render if we're in active view
-        if (viewState.isActive) {
-            renderTasks(state.active);
-        }
+        openModal(null, null);
     }
 
-    /**
-     * Handle task list clicks (event delegation)
-     * @param {Event} event - Click event
-     */
-    function handleListClick(event) {
-        const target = event.target;
+    function handleFormSubmit(event) {
+        event.preventDefault();
         
-        // Ensure we're clicking on an LI element
-        if (target.tagName !== 'LI') return;
+        const taskId = elements.taskId.value;
+        const taskText = elements.taskText.value.trim();
         
-        const taskText = target.textContent;
-        
-        if (viewState.isActive) {
-            // Move from Active → Done
-            state.active = state.active.filter(item => item !== taskText);
-            state.done.push(taskText);
-        } else if (viewState.isDone) {
-            // Move from Done → Active
-            state.done = state.done.filter(item => item !== taskText);
-            state.active.push(taskText);
-        } else if (viewState.isDeleted) {
-            // Move from Deleted → Active
-            state.deleted = state.deleted.filter(item => item !== taskText);
-            state.active.push(taskText);
+        if (!taskText) {
+            showToast('Введите описание задачи', 'error');
+            return;
         }
         
-        persistState();
-        renderCurrentView();
-    }
-
-    /**
-     * Handle context menu (right-click) on tasks
-     * @param {Event} event - Context menu event
-     */
-    function handleContextMenu(event) {
-        const target = event.target;
-        
-        // Only handle right-click in active view
-        if (!viewState.isActive || target.tagName !== 'LI') return;
-        
-        event.preventDefault(); // Prevent default context menu
-        
-        const taskText = target.textContent;
-        
-        // Move from Active → Deleted
-        state.active = state.active.filter(item => item !== taskText);
-        state.deleted.push(taskText);
-        
-        persistState();
-        renderCurrentView();
-    }
-
-    /**
-     * Switch to Active view
-     */
-    function handleActiveView() {
-        viewState.isActive = true;
-        viewState.isDone = false;
-        viewState.isDeleted = false;
-        
-        updateButtonStates();
-        renderTasks(state.active);
-    }
-
-    /**
-     * Switch to Done view
-     */
-    function handleDoneView() {
-        viewState.isActive = false;
-        viewState.isDone = true;
-        viewState.isDeleted = false;
-        
-        updateButtonStates();
-        renderTasks(state.done);
-    }
-
-    /**
-     * Switch to Deleted view
-     */
-    function handleDeletedView() {
-        viewState.isActive = false;
-        viewState.isDone = false;
-        viewState.isDeleted = true;
-        
-        updateButtonStates();
-        renderTasks(state.deleted);
-    }
-
-    /**
-     * Render tasks based on current view state
-     */
-    function renderCurrentView() {
-        if (viewState.isActive) {
-            renderTasks(state.active);
-        } else if (viewState.isDone) {
-            renderTasks(state.done);
+        if (taskId) {
+            updateTask(parseInt(taskId), taskText);
         } else {
-            renderTasks(state.deleted);
+            addTask(taskText);
+        }
+        
+        closeModal();
+    }
+
+    function handleModalClose() {
+        closeModal();
+    }
+
+    function handleOverlayClick(event) {
+        if (event.target === elements.modalOverlay) {
+            closeModal();
+        }
+    }
+
+    function handleEscapeKey(event) {
+        if (event.key === 'Escape' && !elements.modalOverlay.hidden) {
+            closeModal();
         }
     }
 
@@ -297,37 +510,34 @@
     // Event Binding
     // ==========================================================================
     
-    /**
-     * Bind all event listeners
-     */
     function bindEvents() {
-        // Add button click
+        // Add button
         elements.addBtn.addEventListener('click', handleAddTask);
         
-        // View switch buttons
-        elements.activeBtn.addEventListener('click', handleActiveView);
-        elements.doneBtn.addEventListener('click', handleDoneView);
-        elements.deletedBtn.addEventListener('click', handleDeletedView);
+        // Modal events
+        elements.modalClose.addEventListener('click', handleModalClose);
+        elements.modalCancel.addEventListener('click', handleModalClose);
+        elements.taskForm.addEventListener('submit', handleFormSubmit);
+        elements.modalOverlay.addEventListener('click', handleOverlayClick);
+        document.addEventListener('keydown', handleEscapeKey);
         
-        // List interactions (using event delegation)
-        elements.list.addEventListener('click', handleListClick);
-        elements.list.addEventListener('contextmenu', handleContextMenu);
+        // Drag and drop on columns
+        Object.values(elements.columns).forEach(column => {
+            column.addEventListener('dragover', handleDragOver);
+            column.addEventListener('dragleave', handleDragLeave);
+            column.addEventListener('drop', handleDrop);
+        });
     }
 
     // ==========================================================================
     // Initialization
     // ==========================================================================
     
-    /**
-     * Initialize the application
-     */
     function init() {
         cacheElements();
         loadTasks();
         bindEvents();
-        renderTasks(state.active);
-        updateButtonFocus();
-        updateButtonStates();
+        renderAllColumns();
     }
 
     // Start the app when DOM is ready
