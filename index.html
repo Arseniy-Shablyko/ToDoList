@@ -2,29 +2,30 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <meta name="description" content="Task management application with active, done, and deleted states">
+    <title>Task Manager</title>
     <link rel="stylesheet" href="style.css">
-    <script src="script.js" defer></script>
+    <script src="script.js" type="module" defer></script>
 </head>
 <body class="body">
-    <div class="conteiner">
-        <div class="control-buttons-container">
-            <button class="add" id="add">+<br>(add)</button>
-            <button class="active-page" id="active-page">active</button>
-            <button class="done-page" id="done-page">done</button>
-            <button class="deleted-page" id="deleted-page">deleted</button>
-        </div>
-        <div class="tasks-container">
-            <div class="input-container">
+    <div class="container">
+        <header class="header">
+            <nav class="control-buttons-container" role="navigation" aria-label="Task filter controls">
+                <button class="button button--add" id="add" aria-label="Add new task">+<br>(add)</button>
+                <button class="button button--active" id="active-page" aria-label="Show active tasks" aria-pressed="true">active</button>
+                <button class="button button--done" id="done-page" aria-label="Show completed tasks" aria-pressed="false">done</button>
+                <button class="button button--deleted" id="deleted-page" aria-label="Show deleted tasks" aria-pressed="false">deleted</button>
+            </nav>
+        </header>
+        
+        <main class="tasks-container" role="main">
+            <section class="input-container" aria-label="Task list section">
                 <div class="input-space">
-                    <ul class="list" id="list">
-                        
-                    </ul>
+                    <ul class="list" id="list" role="list" aria-live="polite"></ul>
                 </div>
-            </div>
-        </div>
+            </section>
+        </main>
     </div>
 </body>
 </html>
